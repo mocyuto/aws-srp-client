@@ -35,7 +35,7 @@ export class AwsSrpClient {
     'F12FFA06D98A0864D87602733EC86A64521F2B18177B200C' +
     'BBE117577A615D6C770988C0BAD946E208E24FA074E5AB31' +
     '43DB5BFCE0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF';
-  private static G_HEX: string = '2';
+  private static G_HEX = '2';
 
   Region: string;
   PoolId: string;
@@ -52,7 +52,7 @@ export class AwsSrpClient {
     this.ClientId = clientId;
     this.BigN = HashUtils.HexToLong(AwsSrpClient.N_HEX);
     this.G = HashUtils.HexToLong(AwsSrpClient.G_HEX);
-    this.K = HashUtils.HexToLong(HashUtils.HexHash('00' + AwsSrpClient.N_HEX + '0' + AwsSrpClient.G_HEX));
+    this.K = HashUtils.HexToLong(HashUtils.HexHash(`00${AwsSrpClient.N_HEX}0${AwsSrpClient.G_HEX}`));
     this.SmallAValue = bigInt(0);
     this.LargeAValue = bigInt(0);
   }
