@@ -73,6 +73,7 @@ interface PasswordVerifierResult {
     ExpiresIn: number;
     TokenType: string;
   };
+  MfaSetup?: boolean;
   ChallengeParameters?: any;
   Error?: any;
 }

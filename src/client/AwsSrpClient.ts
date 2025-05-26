@@ -203,6 +203,14 @@ export class AwsSrpClient {
               verifierResult.Success = true;
               verifierResult.NewPasswordRequired = true;
               verifierResult.Session = authChallengeResponse.data.Session;
+            } else if (
+              authChallengeResponse.data.ChallengeName &&
+              authChallengeResponse.data.ChallengeName === 'MFA_SETUP'
+            ) {
+              verifierResult.Success = true;
+              verifierResult.MfaSetup = true;
+              verifierResult.Session = authChallengeResponse.data.Session;
+              verifierResult.ChallengeParameters = authChallengeResponse.data.ChallengeParameters;
             }
 
             return verifierResult;
