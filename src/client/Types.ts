@@ -73,6 +73,7 @@ interface PasswordVerifierResult {
     ExpiresIn: number;
     TokenType: string;
   };
+  MfaSetup?: boolean;
   ChallengeParameters?: any;
   Error?: any;
 }
@@ -123,20 +124,20 @@ interface ConfirmForgotPasswordResponse {
 export {
   AmzTarget,
   AuthFlow,
-  InitiateAuthParams,
-  RefreshTokenParams,
-  InitiateAuthRequest,
-  PasswordVerifierChallengeParams,
-  InitiateAuthResponse,
-  RespondToAuthChallengeRequest,
-  ChallengeResponse,
-  PasswordVerifierResult,
-  PasswordVerifierChallengeResponse,
-  NewPasswordChallengeReponse,
-  ChangePasswordParams,
-  ChangePasswordResponse,
-  ForgotPasswordParams,
-  ForgotPasswordResponse,
-  ConfirmForgotPasswordParams,
-  ConfirmForgotPasswordResponse,
+  type InitiateAuthParams,
+  type RefreshTokenParams,
+  type InitiateAuthRequest,
+  type PasswordVerifierChallengeParams,
+  type InitiateAuthResponse,
+  type RespondToAuthChallengeRequest,
+  type ChallengeResponse,
+  type PasswordVerifierResult,
+  type PasswordVerifierChallengeResponse,
+  type NewPasswordChallengeReponse,
+  type ChangePasswordParams,
+  type ChangePasswordResponse,
+  type ForgotPasswordParams,
+  type ForgotPasswordResponse,
+  type ConfirmForgotPasswordParams,
+  type ConfirmForgotPasswordResponse,
 };

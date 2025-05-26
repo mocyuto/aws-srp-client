@@ -1,19 +1,19 @@
-import { HashUtils } from '../utils/HashUtils';
+import { HashUtils } from '../utils/HashUtils.js';
 import {
   AmzTarget,
-  InitiateAuthParams,
-  PasswordVerifierChallengeParams,
-  RespondToAuthChallengeRequest,
-  InitiateAuthRequest,
-  PasswordVerifierResult,
-  InitiateAuthResponse,
-  PasswordVerifierChallengeResponse,
-  NewPasswordChallengeReponse,
-  RefreshTokenParams,
+  type InitiateAuthParams,
+  type PasswordVerifierChallengeParams,
+  type RespondToAuthChallengeRequest,
+  type InitiateAuthRequest,
+  type PasswordVerifierResult,
+  type InitiateAuthResponse,
+  type PasswordVerifierChallengeResponse,
+  type NewPasswordChallengeReponse,
+  type RefreshTokenParams,
   AuthFlow,
-} from './Types';
+} from './Types.js';
 import CryptoJS from 'crypto-js';
-import bigInt, { BigInteger } from 'big-integer';
+import bigInt, { type BigInteger } from 'big-integer';
 import moment from 'moment';
 import axios from 'axios';
 
@@ -35,7 +35,7 @@ export class AwsSrpClient {
     'F12FFA06D98A0864D87602733EC86A64521F2B18177B200C' +
     'BBE117577A615D6C770988C0BAD946E208E24FA074E5AB31' +
     '43DB5BFCE0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF';
-  private static G_HEX: string = '2';
+  private static G_HEX = '2';
 
   Region: string;
   PoolId: string;
@@ -52,7 +52,7 @@ export class AwsSrpClient {
     this.ClientId = clientId;
     this.BigN = HashUtils.HexToLong(AwsSrpClient.N_HEX);
     this.G = HashUtils.HexToLong(AwsSrpClient.G_HEX);
-    this.K = HashUtils.HexToLong(HashUtils.HexHash('00' + AwsSrpClient.N_HEX + '0' + AwsSrpClient.G_HEX));
+    this.K = HashUtils.HexToLong(HashUtils.HexHash(`00${AwsSrpClient.N_HEX}0${AwsSrpClient.G_HEX}`));
     this.SmallAValue = bigInt(0);
     this.LargeAValue = bigInt(0);
   }
@@ -168,7 +168,7 @@ export class AwsSrpClient {
       if (initAuthResponse) {
         const initAuthBody: InitiateAuthResponse = initAuthResponse.data;
 
-        if (initAuthBody && initAuthBody.ChallengeName && initAuthBody.ChallengeName === 'PASSWORD_VERIFIER') {
+        if (initAuthBody?.ChallengeName && initAuthBody.ChallengeName === 'PASSWORD_VERIFIER') {
           const challengeResponse: PasswordVerifierChallengeResponse = this.ProcessChallenge(
             password,
             initAuthBody.ChallengeParameters,
@@ -203,6 +203,14 @@ export class AwsSrpClient {
               verifierResult.Success = true;
               verifierResult.NewPasswordRequired = true;
               verifierResult.Session = authChallengeResponse.data.Session;
+            } else if (
+              authChallengeResponse.data.ChallengeName &&
+              authChallengeResponse.data.ChallengeName === 'MFA_SETUP'
+            ) {
+              verifierResult.Success = true;
+              verifierResult.MfaSetup = true;
+              verifierResult.Session = authChallengeResponse.data.Session;
+              verifierResult.ChallengeParameters = authChallengeResponse.data.ChallengeParameters;
             }
 
             return verifierResult;
