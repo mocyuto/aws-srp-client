@@ -1,19 +1,19 @@
-import { HashUtils } from '../utils/HashUtils';
+import { HashUtils } from '../utils/HashUtils.js';
 import {
   AmzTarget,
-  InitiateAuthParams,
-  PasswordVerifierChallengeParams,
-  RespondToAuthChallengeRequest,
-  InitiateAuthRequest,
-  PasswordVerifierResult,
-  InitiateAuthResponse,
-  PasswordVerifierChallengeResponse,
-  NewPasswordChallengeReponse,
-  RefreshTokenParams,
+  type InitiateAuthParams,
+  type PasswordVerifierChallengeParams,
+  type RespondToAuthChallengeRequest,
+  type InitiateAuthRequest,
+  type PasswordVerifierResult,
+  type InitiateAuthResponse,
+  type PasswordVerifierChallengeResponse,
+  type NewPasswordChallengeReponse,
+  type RefreshTokenParams,
   AuthFlow,
-} from './Types';
+} from './Types.js';
 import CryptoJS from 'crypto-js';
-import bigInt, { BigInteger } from 'big-integer';
+import bigInt, { type BigInteger } from 'big-integer';
 import moment from 'moment';
 import axios from 'axios';
 
@@ -168,7 +168,7 @@ export class AwsSrpClient {
       if (initAuthResponse) {
         const initAuthBody: InitiateAuthResponse = initAuthResponse.data;
 
-        if (initAuthBody && initAuthBody.ChallengeName && initAuthBody.ChallengeName === 'PASSWORD_VERIFIER') {
+        if (initAuthBody?.ChallengeName && initAuthBody.ChallengeName === 'PASSWORD_VERIFIER') {
           const challengeResponse: PasswordVerifierChallengeResponse = this.ProcessChallenge(
             password,
             initAuthBody.ChallengeParameters,

@@ -1,6 +1,6 @@
-import { AwsSrpClient } from './client/AwsSrpClient';
-import { CognitoClient } from './client/CognitoClient';
-import { HashUtils } from './utils/HashUtils';
+import { AwsSrpClient } from './client/AwsSrpClient.js';
+import { CognitoClient } from './client/CognitoClient.js';
+import { HashUtils } from './utils/HashUtils.js';
 import {
   AmzTarget,
   AuthFlow,
@@ -16,7 +16,7 @@ import {
   PasswordVerifierResult,
   NewPasswordChallengeReponse,
   PasswordVerifierChallengeResponse,
-} from './client/Types';
+} from './client/Types.js';
 
 export {
   AwsSrpClient,
