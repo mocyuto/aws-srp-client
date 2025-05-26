@@ -1,14 +1,14 @@
 import axios from 'axios';
 import {
   AmzTarget,
-  ChangePasswordParams,
-  ChangePasswordResponse,
-  ConfirmForgotPasswordParams,
-  ConfirmForgotPasswordResponse,
-  ForgotPasswordParams,
-  ForgotPasswordResponse,
+  type ChangePasswordParams,
+  type ChangePasswordResponse,
+  type ConfirmForgotPasswordParams,
+  type ConfirmForgotPasswordResponse,
+  type ForgotPasswordParams,
+  type ForgotPasswordResponse,
   PasswordVerifierResult,
-} from './Types';
+} from './Types.js';
 
 export class CognitoClient {
   Region: string;
