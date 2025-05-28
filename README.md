@@ -1,5 +1,7 @@
 # AWS SRP Client
 
+A lightweight TypeScript/JavaScript client library for AWS Cognito Secure Remote Password (SRP) authentication. This package provides a simple interface to authenticate users with AWS Cognito User Pools using the SRP protocol.
+
 ## Installation
 
 ```bash

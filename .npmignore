@@ -1,4 +1,50 @@
-src
+# Source files
+src/
+
+# Configuration files
 tsconfig.json
 tslint.json
+jestconfig.json
 .prettierrc
+
+# GitHub workflows
+.github/
+
+# Development dependencies
+node_modules/
+
+# Test files
+__tests__/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+
+# Coverage reports
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Cache
+.npm
+.cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts we don't want
+*.tgz
