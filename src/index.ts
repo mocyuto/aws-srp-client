@@ -16,6 +16,8 @@ import {
   PasswordVerifierResult,
   NewPasswordChallengeReponse,
   PasswordVerifierChallengeResponse,
+  ChallengeNameType,
+  AuthenticationResult,
 } from './client/Types.js';
 
 export {
@@ -34,8 +36,10 @@ export {
   ChallengeResponse,
   PasswordVerifierChallengeParams,
   PasswordVerifierResult,
+  AuthenticationResult,
   NewPasswordChallengeReponse,
   PasswordVerifierChallengeResponse,
+  ChallengeNameType,
 };
 
 // const client = new AwsSrpClient('region', 'pool-id', 'client-id');
