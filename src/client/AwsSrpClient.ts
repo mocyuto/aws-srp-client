@@ -11,6 +11,8 @@ import {
   type NewPasswordChallengeReponse,
   type RefreshTokenParams,
   AuthFlow,
+  ChallengeNameType,
+  type MfaChallengeResponse,
 } from './Types.js';
 import CryptoJS from 'crypto-js';
 import bigInt, { type BigInteger } from 'big-integer';
@@ -168,7 +170,7 @@ export class AwsSrpClient {
       if (initAuthResponse) {
         const initAuthBody: InitiateAuthResponse = initAuthResponse.data;
 
-        if (initAuthBody?.ChallengeName && initAuthBody.ChallengeName === 'PASSWORD_VERIFIER') {
+        if (initAuthBody?.ChallengeName === ChallengeNameType.PASSWORD_VERIFIER) {
           const challengeResponse: PasswordVerifierChallengeResponse = this.ProcessChallenge(
             password,
             initAuthBody.ChallengeParameters,
@@ -196,23 +198,37 @@ export class AwsSrpClient {
               verifierResult.Success = true;
               verifierResult.AuthenticationResult = authChallengeResponse.data.AuthenticationResult;
               verifierResult.ChallengeParameters = authChallengeResponse.data.ChallengeParameters;
-            } else if (
-              authChallengeResponse.data.ChallengeName &&
-              authChallengeResponse.data.ChallengeName === 'NEW_PASSWORD_REQUIRED'
-            ) {
+            } else {
               verifierResult.Success = true;
-              verifierResult.NewPasswordRequired = true;
               verifierResult.Session = authChallengeResponse.data.Session;
-            } else if (
-              authChallengeResponse.data.ChallengeName &&
-              authChallengeResponse.data.ChallengeName === 'MFA_SETUP'
-            ) {
-              verifierResult.Success = true;
-              verifierResult.MfaSetup = true;
-              verifierResult.Session = authChallengeResponse.data.Session;
+              verifierResult.ChallengeName = authChallengeResponse.data.ChallengeName;
               verifierResult.ChallengeParameters = authChallengeResponse.data.ChallengeParameters;
+              switch (authChallengeResponse.data.ChallengeName) {
+                case ChallengeNameType.NEW_PASSWORD_REQUIRED:
+                  verifierResult.NewPasswordRequired = true;
+                  break;
+                case ChallengeNameType.MFA_SETUP:
+                  verifierResult.MfaSetup = true;
+                  break;
+                case ChallengeNameType.SMS_MFA:
+                case ChallengeNameType.EMAIL_OTP:
+                case ChallengeNameType.SOFTWARE_TOKEN_MFA:
+                case ChallengeNameType.SELECT_MFA_TYPE:
+                case ChallengeNameType.CUSTOM_CHALLENGE:
+                case ChallengeNameType.SELECT_CHALLENGE:
+                case ChallengeNameType.DEVICE_SRP_AUTH:
+                case ChallengeNameType.DEVICE_PASSWORD_VERIFIER:
+                case ChallengeNameType.ADMIN_NO_SRP_AUTH:
+                case ChallengeNameType.SMS_OTP:
+                case ChallengeNameType.PASSWORD:
+                case ChallengeNameType.WEB_AUTHN:
+                case ChallengeNameType.PASSWORD_SRP:
+                  // その他のチャレンジタイプの処理
+                  break;
+                default:
+                  throw new Error(`Unexpected challenge name: ${authChallengeResponse.data.ChallengeName}`);
+              }
             }
-
             return verifierResult;
           }
         }
@@ -318,6 +334,96 @@ export class AwsSrpClient {
           NewPasswordRequired: false,
           AuthenticationResult: newPasswordResponse.data.AuthenticationResult,
           ChallengeParameters: newPasswordResponse.data.ChallengeParameters,
+        };
+      }
+    } catch (err) {
+      return {
+        Success: false,
+        NewPasswordRequired: false,
+        Error: err,
+      };
+    }
+  }
+
+  /**
+   * Authenticates a user with Multi-Factor Authentication (MFA) using SMS verification code.
+   *
+   * This method responds to an SMS_MFA challenge by sending the provided MFA code
+   * to AWS Cognito for verification. Upon successful verification, it returns
+   * authentication tokens and user information.
+   *
+   * @param username - The username of the user being authenticated
+   * @param mfaCode - The SMS verification code received by the user
+   * @param session - The session token from the initial authentication challenge
+   *
+   * @returns A Promise that resolves to a PasswordVerifierResult containing:
+   *   - Success: boolean indicating if authentication was successful
+   *   - NewPasswordRequired: boolean indicating if password change is required
+   *   - AuthenticationResult: JWT tokens and user info (on success)
+   *   - ChallengeParameters: Additional challenge parameters (on success)
+   *   - Error: Error details (on failure)
+   *
+   * @throws Returns error information in the result object rather than throwing
+   *
+   * @example
+   * ```typescript
+   * const result = await client.AuthenticateUserWithMfa(
+   *   'john.doe@example.com',
+   *   '123456',
+   *   'session-token-from-initial-auth'
+   * );
+   *
+   * if (result?.Success) {
+   *   console.log('MFA authentication successful');
+   *   console.log('Access token:', result.AuthenticationResult.AccessToken);
+   * } else {
+   *   console.error('MFA authentication failed:', result?.Error);
+   * }
+   * ```
+   */
+  public async AuthenticateUserWithMfa(
+    username: string,
+    mfaCode: string,
+    mfaType: ChallengeNameType,
+    session: string,
+  ): Promise<PasswordVerifierResult | undefined> {
+    const cognitoUrl = `https://cognito-idp.${this.Region}.amazonaws.com`;
+
+    const mfaChallengeResponse: MfaChallengeResponse = {
+      USERNAME: username,
+    };
+    switch (mfaType) {
+      case ChallengeNameType.SMS_MFA:
+        mfaChallengeResponse.SMS_MFA_CODE = mfaCode;
+        break;
+      case ChallengeNameType.SOFTWARE_TOKEN_MFA:
+        mfaChallengeResponse.SOFTWARE_TOKEN_MFA_CODE = mfaCode;
+        break;
+      default:
+        throw new Error(`Unsupported MFA type: ${mfaType}`);
+    }
+
+    const req: RespondToAuthChallengeRequest = {
+      ChallengeName: mfaType,
+      ClientId: this.ClientId,
+      Session: session,
+      ChallengeResponses: mfaChallengeResponse,
+    };
+
+    try {
+      const mfaResponse = await axios.request({
+        url: cognitoUrl,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.AuthChallenge },
+        data: JSON.stringify(req),
+      });
+
+      if (mfaResponse) {
+        return {
+          Success: true,
+          NewPasswordRequired: false,
+          AuthenticationResult: mfaResponse.data.AuthenticationResult,
+          ChallengeParameters: mfaResponse.data.ChallengeParameters,
         };
       }
     } catch (err) {
