@@ -40,6 +40,7 @@ export class AwsSrpClient {
   private static G_HEX = '2';
 
   Region: string;
+  cognitoUrl: string;
   PoolId: string;
   ClientId: string;
   BigN: BigInteger;
@@ -50,6 +51,7 @@ export class AwsSrpClient {
 
   constructor(region: string, poolId: string, clientId: string) {
     this.Region = region;
+    this.cognitoUrl = `https://cognito-idp.${this.Region}.amazonaws.com`;
     this.PoolId = poolId;
     this.ClientId = clientId;
     this.BigN = HashUtils.HexToLong(AwsSrpClient.N_HEX);
@@ -147,8 +149,6 @@ export class AwsSrpClient {
     try {
       this.Initialize();
 
-      const cognitoUrl = `https://cognito-idp.${this.Region}.amazonaws.com`;
-
       const authParams: InitiateAuthParams = {
         USERNAME: username,
         SRP_A: this.GetSrpA(),
@@ -161,7 +161,7 @@ export class AwsSrpClient {
       };
 
       const initAuthResponse = await axios.request({
-        url: cognitoUrl,
+        url: this.cognitoUrl,
         method: 'POST',
         headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.InitiateAuth },
         data: JSON.stringify(authRequest),
@@ -181,56 +181,7 @@ export class AwsSrpClient {
             ClientId: this.ClientId,
           };
 
-          const authChallengeResponse = await axios.request({
-            url: cognitoUrl,
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.AuthChallenge },
-            data: JSON.stringify(challengeRequest),
-          });
-
-          if (authChallengeResponse) {
-            const verifierResult: PasswordVerifierResult = {
-              Success: false,
-              NewPasswordRequired: false,
-            };
-
-            if (authChallengeResponse.data.AuthenticationResult) {
-              verifierResult.Success = true;
-              verifierResult.AuthenticationResult = authChallengeResponse.data.AuthenticationResult;
-              verifierResult.ChallengeParameters = authChallengeResponse.data.ChallengeParameters;
-            } else {
-              verifierResult.Success = true;
-              verifierResult.Session = authChallengeResponse.data.Session;
-              verifierResult.ChallengeName = authChallengeResponse.data.ChallengeName;
-              verifierResult.ChallengeParameters = authChallengeResponse.data.ChallengeParameters;
-              switch (authChallengeResponse.data.ChallengeName) {
-                case ChallengeNameType.NEW_PASSWORD_REQUIRED:
-                  verifierResult.NewPasswordRequired = true;
-                  break;
-                case ChallengeNameType.MFA_SETUP:
-                  verifierResult.MfaSetup = true;
-                  break;
-                case ChallengeNameType.SMS_MFA:
-                case ChallengeNameType.EMAIL_OTP:
-                case ChallengeNameType.SOFTWARE_TOKEN_MFA:
-                case ChallengeNameType.SELECT_MFA_TYPE:
-                case ChallengeNameType.CUSTOM_CHALLENGE:
-                case ChallengeNameType.SELECT_CHALLENGE:
-                case ChallengeNameType.DEVICE_SRP_AUTH:
-                case ChallengeNameType.DEVICE_PASSWORD_VERIFIER:
-                case ChallengeNameType.ADMIN_NO_SRP_AUTH:
-                case ChallengeNameType.SMS_OTP:
-                case ChallengeNameType.PASSWORD:
-                case ChallengeNameType.WEB_AUTHN:
-                case ChallengeNameType.PASSWORD_SRP:
-                  // その他のチャレンジタイプの処理
-                  break;
-                default:
-                  throw new Error(`Unexpected challenge name: ${authChallengeResponse.data.ChallengeName}`);
-              }
-            }
-            return verifierResult;
-          }
+          return this.authChallenge(challengeRequest);
         }
       }
     } catch (err) {
@@ -252,8 +203,6 @@ export class AwsSrpClient {
    */
   public async AuthenticateUserWithRefreshToken(refreshToken: string): Promise<PasswordVerifierResult | undefined> {
     try {
-      const cognitoUrl = `https://cognito-idp.${this.Region}.amazonaws.com`;
-
       const authParams: RefreshTokenParams = {
         REFRESH_TOKEN: refreshToken,
       };
@@ -265,7 +214,7 @@ export class AwsSrpClient {
       };
 
       const initAuthResponse = await axios.request({
-        url: cognitoUrl,
+        url: this.cognitoUrl,
         method: 'POST',
         headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.InitiateAuth },
         data: JSON.stringify(authRequest),
@@ -306,8 +255,6 @@ export class AwsSrpClient {
     username: string,
     newPassword: string,
   ): Promise<PasswordVerifierResult | undefined> {
-    const cognitoUrl = `https://cognito-idp.${this.Region}.amazonaws.com`;
-
     const newPasswordChallengeResponse: NewPasswordChallengeReponse = {
       USERNAME: username,
       NEW_PASSWORD: newPassword,
@@ -321,21 +268,7 @@ export class AwsSrpClient {
     };
 
     try {
-      const newPasswordResponse = await axios.request({
-        url: cognitoUrl,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.AuthChallenge },
-        data: JSON.stringify(newPasswordChallengeRequest),
-      });
-
-      if (newPasswordResponse) {
-        return {
-          Success: true,
-          NewPasswordRequired: false,
-          AuthenticationResult: newPasswordResponse.data.AuthenticationResult,
-          ChallengeParameters: newPasswordResponse.data.ChallengeParameters,
-        };
-      }
+      return this.authChallenge(newPasswordChallengeRequest);
     } catch (err) {
       return {
         Success: false,
@@ -387,8 +320,6 @@ export class AwsSrpClient {
     mfaType: ChallengeNameType,
     session: string,
   ): Promise<PasswordVerifierResult | undefined> {
-    const cognitoUrl = `https://cognito-idp.${this.Region}.amazonaws.com`;
-
     const mfaChallengeResponse: MfaChallengeResponse = {
       USERNAME: username,
     };
@@ -411,27 +342,77 @@ export class AwsSrpClient {
     };
 
     try {
-      const mfaResponse = await axios.request({
-        url: cognitoUrl,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.AuthChallenge },
-        data: JSON.stringify(req),
-      });
-
-      if (mfaResponse) {
-        return {
-          Success: true,
-          NewPasswordRequired: false,
-          AuthenticationResult: mfaResponse.data.AuthenticationResult,
-          ChallengeParameters: mfaResponse.data.ChallengeParameters,
-        };
-      }
+      return this.authChallenge(req);
     } catch (err) {
       return {
         Success: false,
         NewPasswordRequired: false,
         Error: err,
       };
+    }
+  }
+
+  /**
+   * Responds to an authentication challenge and returns the result.
+   *
+   * This method sends a request to AWS Cognito with the provided challenge response
+   * and processes the response to return a PasswordVerifierResult.
+   *
+   * @param req - The request object containing challenge responses and session information
+   * @returns A Promise that resolves to a PasswordVerifierResult containing:
+   *   - Success: boolean indicating if the challenge was successful
+   *   - NewPasswordRequired: boolean indicating if a new password is required
+   *   - AuthenticationResult: JWT tokens and user info (on success)
+   *   - ChallengeParameters: Additional challenge parameters (on success)
+   *   - Error: Error details (on failure)
+   */
+  private async authChallenge(req: RespondToAuthChallengeRequest): Promise<PasswordVerifierResult | undefined> {
+    const res = await axios.request({
+      url: this.cognitoUrl,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.AuthChallenge },
+      data: JSON.stringify(req),
+    });
+    if (res) {
+      const verifierResult: PasswordVerifierResult = {
+        Success: true,
+        NewPasswordRequired: false,
+      };
+
+      if (res.data.AuthenticationResult) {
+        verifierResult.AuthenticationResult = res.data.AuthenticationResult;
+        verifierResult.ChallengeParameters = res.data.ChallengeParameters;
+      } else {
+        verifierResult.Session = res.data.Session;
+        verifierResult.ChallengeName = res.data.ChallengeName;
+        verifierResult.ChallengeParameters = res.data.ChallengeParameters;
+        switch (res.data.ChallengeName) {
+          case ChallengeNameType.NEW_PASSWORD_REQUIRED:
+            verifierResult.NewPasswordRequired = true;
+            break;
+          case ChallengeNameType.MFA_SETUP:
+            verifierResult.MfaSetup = true;
+            break;
+          case ChallengeNameType.SMS_MFA:
+          case ChallengeNameType.EMAIL_OTP:
+          case ChallengeNameType.SOFTWARE_TOKEN_MFA:
+          case ChallengeNameType.SELECT_MFA_TYPE:
+          case ChallengeNameType.CUSTOM_CHALLENGE:
+          case ChallengeNameType.SELECT_CHALLENGE:
+          case ChallengeNameType.DEVICE_SRP_AUTH:
+          case ChallengeNameType.DEVICE_PASSWORD_VERIFIER:
+          case ChallengeNameType.ADMIN_NO_SRP_AUTH:
+          case ChallengeNameType.SMS_OTP:
+          case ChallengeNameType.PASSWORD:
+          case ChallengeNameType.WEB_AUTHN:
+          case ChallengeNameType.PASSWORD_SRP:
+            // その他のチャレンジタイプの処理
+            break;
+          default:
+            throw new Error(`Unexpected challenge name: ${res.data.ChallengeName}`);
+        }
+      }
+      return verifierResult;
     }
   }
 }
