@@ -125,19 +125,11 @@ jobs:
 
       - name: Create GitHub release (if manual trigger)
         if: github.event_name == 'workflow_dispatch' && steps.version-check.outputs.changed == 'true'
-        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
+        run: |
+          gh release create v${{ steps.new-version.outputs.version }} --generate-notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.new-version.outputs.version }}
-          release_name: Release v${{ steps.new-version.outputs.version }}
-          body: |
-            ## Changes
-            Released version ${{ steps.new-version.outputs.version }}
 
-            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
-          draft: false
-          prerelease: false
 
   dry-run:
     needs: test
