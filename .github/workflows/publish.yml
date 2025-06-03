@@ -105,19 +105,6 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit version change
-        if: steps.version-check.outputs.changed == 'true' && github.event_name == 'workflow_dispatch'
-        run: |
-          git add package.json
-          git commit -m "chore: bump version to ${{ steps.new-version.outputs.version }}"
-          git push
-
-      - name: Create git tag
-        if: steps.version-check.outputs.changed == 'true' && github.event_name == 'workflow_dispatch'
-        run: |
-          git tag v${{ steps.new-version.outputs.version }}
-          git push origin v${{ steps.new-version.outputs.version }}
-
       - name: Publish to NPM
         run: npm publish  --provenance --access public
         env:
