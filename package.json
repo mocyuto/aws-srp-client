@@ -1,6 +1,6 @@
 {
   "name": "@mocyuto/aws-srp-client",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Authenticate users with AWS Cognito via SRP",
   "exports": "./lib/index.js",
   "types": "lib/index.d.ts",
