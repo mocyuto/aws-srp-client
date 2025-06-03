@@ -147,4 +147,3 @@ export interface ConfirmForgotPasswordResponse {
   Success: boolean;
   Error?: any;
 }
-
