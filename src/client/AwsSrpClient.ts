@@ -367,52 +367,61 @@ export class AwsSrpClient {
    *   - Error: Error details (on failure)
    */
   private async authChallenge(req: RespondToAuthChallengeRequest): Promise<PasswordVerifierResult | undefined> {
-    const res = await axios.request({
-      url: this.cognitoUrl,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.AuthChallenge },
-      data: JSON.stringify(req),
-    });
-    if (res) {
-      const verifierResult: PasswordVerifierResult = {
-        Success: true,
-        NewPasswordRequired: false,
-      };
+    try {
+      const res = await axios.request({
+        url: this.cognitoUrl,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': AmzTarget.AuthChallenge },
+        data: JSON.stringify(req),
+      });
 
-      if (res.data.AuthenticationResult) {
-        verifierResult.AuthenticationResult = res.data.AuthenticationResult;
-        verifierResult.ChallengeParameters = res.data.ChallengeParameters;
-      } else {
-        verifierResult.Session = res.data.Session;
-        verifierResult.ChallengeName = res.data.ChallengeName;
-        verifierResult.ChallengeParameters = res.data.ChallengeParameters;
-        switch (res.data.ChallengeName) {
-          case ChallengeNameType.NEW_PASSWORD_REQUIRED:
-            verifierResult.NewPasswordRequired = true;
-            break;
-          case ChallengeNameType.MFA_SETUP:
-            verifierResult.MfaSetup = true;
-            break;
-          case ChallengeNameType.SMS_MFA:
-          case ChallengeNameType.EMAIL_OTP:
-          case ChallengeNameType.SOFTWARE_TOKEN_MFA:
-          case ChallengeNameType.SELECT_MFA_TYPE:
-          case ChallengeNameType.CUSTOM_CHALLENGE:
-          case ChallengeNameType.SELECT_CHALLENGE:
-          case ChallengeNameType.DEVICE_SRP_AUTH:
-          case ChallengeNameType.DEVICE_PASSWORD_VERIFIER:
-          case ChallengeNameType.ADMIN_NO_SRP_AUTH:
-          case ChallengeNameType.SMS_OTP:
-          case ChallengeNameType.PASSWORD:
-          case ChallengeNameType.WEB_AUTHN:
-          case ChallengeNameType.PASSWORD_SRP:
-            // その他のチャレンジタイプの処理
-            break;
-          default:
-            throw new Error(`Unexpected challenge name: ${res.data.ChallengeName}`);
+      if (res) {
+        const verifierResult: PasswordVerifierResult = {
+          Success: true,
+          NewPasswordRequired: false,
+        };
+
+        if (res.data.AuthenticationResult) {
+          verifierResult.AuthenticationResult = res.data.AuthenticationResult;
+          verifierResult.ChallengeParameters = res.data.ChallengeParameters;
+        } else {
+          verifierResult.Session = res.data.Session;
+          verifierResult.ChallengeName = res.data.ChallengeName;
+          verifierResult.ChallengeParameters = res.data.ChallengeParameters;
+          switch (res.data.ChallengeName) {
+            case ChallengeNameType.NEW_PASSWORD_REQUIRED:
+              verifierResult.NewPasswordRequired = true;
+              break;
+            case ChallengeNameType.MFA_SETUP:
+              verifierResult.MfaSetup = true;
+              break;
+            case ChallengeNameType.SMS_MFA:
+            case ChallengeNameType.EMAIL_OTP:
+            case ChallengeNameType.SOFTWARE_TOKEN_MFA:
+            case ChallengeNameType.SELECT_MFA_TYPE:
+            case ChallengeNameType.CUSTOM_CHALLENGE:
+            case ChallengeNameType.SELECT_CHALLENGE:
+            case ChallengeNameType.DEVICE_SRP_AUTH:
+            case ChallengeNameType.DEVICE_PASSWORD_VERIFIER:
+            case ChallengeNameType.ADMIN_NO_SRP_AUTH:
+            case ChallengeNameType.SMS_OTP:
+            case ChallengeNameType.PASSWORD:
+            case ChallengeNameType.WEB_AUTHN:
+            case ChallengeNameType.PASSWORD_SRP:
+              // その他のチャレンジタイプの処理
+              break;
+            default:
+              throw new Error(`Unexpected challenge name: ${res.data.ChallengeName}`);
+          }
         }
+        return verifierResult;
       }
-      return verifierResult;
+    } catch (err) {
+      return {
+        Success: false,
+        NewPasswordRequired: false,
+        Error: err,
+      };
     }
   }
 }
